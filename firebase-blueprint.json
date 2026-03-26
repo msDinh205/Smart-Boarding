@@ -1,0 +1,43 @@
+{
+  "entities": {
+    "DailyScore": {
+      "title": "Daily Score",
+      "description": "Represents the discipline score for a class on a specific day.",
+      "type": "object",
+      "properties": {
+        "className": { "type": "string", "description": "The name of the class (e.g., 10A)." },
+        "date": { "type": "string", "format": "date", "description": "The date of the score." },
+        "score": { "type": "number", "description": "The final discipline score (0-10)." },
+        "details": { "type": "string", "description": "Detailed analysis or notes from the scoring." },
+        "authorUid": { "type": "string", "description": "The UID of the user who recorded the score." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the record was created." }
+      },
+      "required": ["className", "date", "score", "authorUid", "createdAt"]
+    },
+    "WeeklyScore": {
+      "title": "Weekly Score",
+      "description": "Represents the total competition score for a class for a specific week.",
+      "type": "object",
+      "properties": {
+        "className": { "type": "string", "description": "The name of the class." },
+        "weekNumber": { "type": "integer", "description": "The week number of the year." },
+        "year": { "type": "integer", "description": "The year of the score." },
+        "totalScore": { "type": "number", "description": "The final calculated competition score." },
+        "details": { "type": "string", "description": "Breakdown of the weekly score components." },
+        "authorUid": { "type": "string", "description": "The UID of the user who recorded the score." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the record was created." }
+      },
+      "required": ["className", "weekNumber", "year", "totalScore", "authorUid", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/daily_scores/{scoreId}": {
+      "schema": "DailyScore",
+      "description": "Collection of daily discipline scores."
+    },
+    "/weekly_scores/{scoreId}": {
+      "schema": "WeeklyScore",
+      "description": "Collection of weekly competition scores."
+    }
+  }
+}

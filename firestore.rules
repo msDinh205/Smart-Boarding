@@ -1,0 +1,118 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: daily_scores
+    // Document ID: auto-generated
+    // Fields:
+    //   - className: string (required) - name of the class
+    //   - date: string (required) - ISO 8601 date string
+    //   - score: number (required) - discipline score
+    //   - details: string (optional) - analysis notes
+    //   - authorUid: string (required) - creator's UID
+    //   - createdAt: timestamp (required) - creation time
+    //
+    // Collection: weekly_scores
+    // Document ID: auto-generated
+    // Fields:
+    //   - className: string (required) - name of the class
+    //   - weekNumber: int (required) - week of the year
+    //   - year: int (required) - year of the score
+    //   - totalScore: number (required) - final competition score
+    //   - details: string (optional) - breakdown notes
+    //   - authorUid: string (required) - creator's UID
+    //   - createdAt: timestamp (required) - creation time
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.authorUid;
+    }
+
+    function uidUnchanged() {
+      return !('authorUid' in request.resource.data) ||
+        request.resource.data.authorUid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('authorUid' in request.resource.data) ||
+        request.resource.data.authorUid == resource.data.authorUid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // Domain Validators
+    function isValidDailyScore(data) {
+      return hasRequiredFields(['className', 'date', 'score', 'authorUid', 'createdAt']) &&
+             data.className is string && data.className.size() > 0 &&
+             data.date is string &&
+             data.score is number && data.score >= 0 && data.score <= 10 &&
+             data.authorUid == request.auth.uid;
+    }
+
+    function isValidWeeklyScore(data) {
+      return hasRequiredFields(['className', 'weekNumber', 'year', 'totalScore', 'authorUid', 'createdAt']) &&
+             data.className is string && data.className.size() > 0 &&
+             data.weekNumber is int && data.weekNumber > 0 && data.weekNumber <= 53 &&
+             data.year is int && data.year >= 2024 &&
+             data.totalScore is number && data.totalScore >= 0 &&
+             data.authorUid == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /daily_scores/{scoreId} {
+      // Allow authenticated users to read scores
+      allow read: if isAuthenticated();
+      
+      // Allow authenticated users to create their own scores
+      allow create: if isAuthenticated() && isValidDailyScore(request.resource.data) && uidUnchanged();
+      
+      // Allow owners to update their own scores
+      allow update: if isAuthenticated() && isDocOwner() && isValidDailyScore(request.resource.data) && uidNotModified();
+      
+      // Allow owners to delete their own scores
+      allow delete: if isAuthenticated() && isDocOwner();
+    }
+
+    match /weekly_scores/{scoreId} {
+      // Allow authenticated users to read scores
+      allow read: if isAuthenticated();
+      
+      // Allow authenticated users to create their own scores
+      allow create: if isAuthenticated() && isValidWeeklyScore(request.resource.data) && uidUnchanged();
+      
+      // Allow owners to update their own scores
+      allow update: if isAuthenticated() && isDocOwner() && isValidWeeklyScore(request.resource.data) && uidNotModified();
+      
+      // Allow owners to delete their own scores
+      allow delete: if isAuthenticated() && isDocOwner();
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}
